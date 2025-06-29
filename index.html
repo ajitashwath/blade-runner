@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAPD Identity System 2049</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #ff6b35;
+            --secondary-color: #f7931e;
+            --accent-color: #ffcc02;
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-accent: #2a1810;
+        }
+
+        [data-theme="purple"] {
+            --primary-color: #8b5cf6;
+            --secondary-color: #a855f7;
+            --accent-color: #c084fc;
+            --bg-accent: #1a0a2a;
+        }
+
+        [data-theme="cyan"] {
+            --primary-color: #06b6d4;
+            --secondary-color: #0891b2;
+            --accent-color: #67e8f9;
+            --bg-accent: #0a1a2a;
+        }
+
+        [data-theme="green"] {
+            --primary-color: #10b981;
+            --secondary-color: #059669;
+            --accent-color: #34d399;
+            --bg-accent: #0a2a1a;
+        }
+
+        [data-theme="red"] {
+            --primary-color: #ef4444;
+            --secondary-color: #dc2626;
+            --accent-color: #f87171;
+            --bg-accent: #2a0a0a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        /* Terminal Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 1s ease-out;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .terminal-container {
+            width: 90%;
+            max-width: 800px;
+            background: #0a0a0a;
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+            box-shadow: 
+                0 0 30px var(--primary-color),
+                inset 0 0 30px rgba(255, 107, 53, 0.1);
+            overflow: hidden;
+        }
+
+        .terminal-header {
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .terminal-title {
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            color: #000;
+            font-size: 1rem;
+            letter-spacing: 1px;
+        }
+
+        .terminal-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .terminal-btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.3);
+        }
+
+        .terminal-btn.close { background: #ff5f56; }
+        .terminal-btn.minimize { background: #ffbd2e; }
+        .terminal-btn.maximize { background: #27ca3f; }
+
+        .terminal-body {
+            background: #000;
+            padding: 20px;
+            min-height: 400px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .boot-sequence {
+            color: var(--primary-color);
+        }
+
+        .boot-line {
+            margin-bottom: 8px;
+            opacity: 0;
+            animation: typewriter 0.5s ease-out forwards;
+        }
+
+        .boot-line.ok {
+            color: #00ff00;
+        }
+
+        .boot-line.warning {
+            color: #ffcc02;
+        }
+
+        .boot-line.error {
+            color: #ff4444;
+        }
+
+        .boot-line.info {
+            color: #00aaff;
+        }
+
+        @keyframes typewriter {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background: var(--primary-color);
+            animation: blink 1s infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .progress-container {
+            margin: 20px 0;
+            opacity: 0;
+        }
+
+        .progress-container.show {
+            opacity: 1;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .progress-label {
+            color: var(--accent-color);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 20px;
+            background: #1a1a1a;
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            width: 0%;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #000;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .system-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            opacity: 0;
+        }
+
+        .system-info.show {
+            opacity: 1;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .system-info h3 {
+            color: var(--accent-color);
+            margin-bottom: 10px;
+            font-family: 'Orbitron', monospace;
+        }
+
+        .system-info p {
+            color: #ccc;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        /* Main App Styles */
+        .main-app {
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 30%, var(--bg-accent) 60%, var(--bg-secondary) 100%);
+            min-height: 100vh;
+            opacity: 0;
+            transform: scale(0.95);
+            transition: opacity 1s ease-out, transform 1s ease-out;
+        }
+
+        .main-app.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .title {
+            font-family: 'Orbitron', monospace;
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px var(--primary-color);
+            margin-bottom: 1rem;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 300;
+            letter-spacing: 1px;
+            opacity: 0.8;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 2rem auto;
+            flex-wrap: wrap;
+        }
+
+        .generate-btn, .download-btn, .edit-btn, .settings-btn {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            padding: 1rem 2rem;
+            font-family: 'Orbitron', monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #000;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
+        }
+
+        .edit-btn.active {
+            background: linear-gradient(45deg, #ef4444, #dc2626);
+        }
+
+        .generate-btn:hover, .download-btn:hover, .edit-btn:hover, .settings-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px var(--primary-color);
+        }
+
+        .id-card {
+            background: linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(40, 24, 16, 0.95) 50%, rgba(26, 10, 42, 0.95) 100%);
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem auto;
+            max-width: 800px;
+            box-shadow: 
+                0 0 50px var(--primary-color),
+                inset 0 0 50px rgba(255, 107, 53, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .id-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+            opacity: 0.1;
+            animation: scan 3s infinite;
+        }
+
+        @keyframes scan {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--primary-color);
+            padding-bottom: 1rem;
+        }
+
+        .lapd-logo {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            font-weight: 900;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 2px;
+        }
+
+        .id-number {
+            font-family: 'Orbitron', monospace;
+            font-size: 1rem;
+            background: linear-gradient(45deg, var(--accent-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 1px;
+        }
+
+        .card-content {
+            display: grid;
+            grid-template-columns: 1fr 200px;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .info-section {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .info-row {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .label {
+            font-size: 0.9rem;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .value {
+            font-size: 1.1rem;
+            color: #ffffff;
+            font-weight: 500;
+            position: relative;
+        }
+
+        .value.editable {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .value.editable:hover {
+            background: rgba(255, 107, 53, 0.1);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px var(--primary-color);
+        }
+
+        .value.editing {
+            background: rgba(255, 107, 53, 0.2);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 15px var(--primary-color);
+        }
+
+        .edit-input {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid var(--primary-color);
+            border-radius: 4px;
+            color: #ffffff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 500;
+            padding: 4px 8px;
+            width: 100%;
+            box-shadow: 0 0 15px var(--primary-color);
+            outline: none;
+        }
+
+        .edit-input:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 20px var(--secondary-color);
+        }
+
+        .name {
+            font-size: 1.8rem !important;
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            background: linear-gradient(45deg, var(--accent-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 10px var(--accent-color);
+        }
+
+        .name.editable:hover {
+            background: rgba(255, 204, 2, 0.1);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+
+        .name.editing {
+            background: rgba(255, 204, 2, 0.2);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 15px var(--accent-color);
+        }
+
+        .name .edit-input {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.8rem;
+            font-weight: 700;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 15px var(--accent-color);
+        }
+
+        .name .edit-input:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 20px var(--secondary-color);
+        }
+
+        .photo-section {
+            background: linear-gradient(135deg, #1a1a1a, var(--bg-accent));
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .photo-placeholder {
+            font-size: 4rem;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            opacity: 0.5;
+        }
+
+        .hologram-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, var(--primary-color) 40%, var(--secondary-color) 60%, transparent 70%);
+            opacity: 0.1;
+            animation: hologram 2s infinite;
+        }
+
+        @keyframes hologram {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 0.1; }
+        }
+
+        .status-bar {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--primary-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status {
+            color: #00ff00;
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .timestamp {
+            background: linear-gradient(45deg, var(--accent-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.9rem;
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100vh;
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(20px);
+            border-left: 2px solid var(--primary-color);
+            z-index: 1001;
+            transition: right 0.3s ease;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .settings-panel.open {
+            right: 0;
+        }
+
+        .settings-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .settings-overlay.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--primary-color);
+        }
+
+        .settings-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .close-settings {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .close-settings:hover {
+            background: rgba(255, 107, 53, 0.1);
+            transform: rotate(90deg);
+        }
+
+        .theme-section {
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1rem;
+            color: var(--accent-color);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .theme-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .theme-option {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .theme-option:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary-color);
+        }
+
+        .theme-option.active {
+            border-color: var(--primary-color);
+            background: rgba(255, 107, 53, 0.1);
+            box-shadow: 0 0 15px var(--primary-color);
+        }
+
+        .theme-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .theme-preview.orange {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+        }
+
+        .theme-preview.purple {
+            background: linear-gradient(45deg, #8b5cf6, #a855f7);
+        }
+
+        .theme-preview.cyan {
+            background: linear-gradient(45deg, #06b6d4, #0891b2);
+        }
+
+        .theme-preview.green {
+            background: linear-gradient(45deg, #10b981, #059669);
+        }
+
+        .theme-preview.red {
+            background: linear-gradient(45deg, #ef4444, #dc2626);
+        }
+
+        .theme-info {
+            flex: 1;
+        }
+
+        .theme-name {
+            font-family: 'Orbitron', monospace;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 0.25rem;
+        }
+
+        .theme-description {
+            font-size: 0.8rem;
+            color: #999;
+        }
+
+        /* Notifications */
+        .download-notification, .edit-mode-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            color: #000;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 600;
+            box-shadow: 0 4px 20px var(--primary-color);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 1002;
+        }
+
+        .edit-mode-indicator {
+            top: 80px;
+            background: linear-gradient(45deg, #10b981, #059669);
+        }
+
+        .edit-mode-indicator.exit {
+            background: linear-gradient(45deg, #ef4444, #dc2626);
+        }
+
+        .download-notification.show, .edit-mode-indicator.show {
+            transform: translateX(0);
+        }
+
+        /* Background Effects */
+        .background-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(var(--primary-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--primary-color) 1px, transparent 1px);
+            background-size: 50px 50px;
+            opacity: 0.1;
+            animation: grid-move 20s linear infinite;
+            z-index: 1;
+        }
+
+        @keyframes grid-move {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            box-shadow: 0 0 10px var(--primary-color);
+            animation: float 6s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0; }
+            50% { transform: translateY(-100px) rotate(180deg); opacity: 1; }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .terminal-container {
+                width: 95%;
+                margin: 0 10px;
+            }
+            
+            .terminal-body {
+                padding: 15px;
+                font-size: 12px;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+            
+            .card-content {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .photo-section {
+                height: 150px;
+                order: -1;
+            }
+            
+            .info-row {
+                grid-template-columns: 100px 1fr;
+            }
+
+            .button-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .generate-btn, .download-btn, .edit-btn, .settings-btn {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .settings-panel {
+                width: 100%;
+                right: -100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Terminal Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="terminal-container">
+            <div class="terminal-header">
+                <div class="terminal-title">LAPD NEURAL INTERFACE v2.049</div>
+                <div class="terminal-controls">
+                    <div class="terminal-btn close"></div>
+                    <div class="terminal-btn minimize"></div>
+                    <div class="terminal-btn maximize"></div>
+                </div>
+            </div>
+            <div class="terminal-body">
+                <div class="boot-sequence" id="bootSequence">
+                    <!-- Boot messages will be added here -->
+                </div>
+                
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-label">System Initialization</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="progressBar"></div>
+                        <div class="progress-text" id="progressText">0%</div>
+                    </div>
+                </div>
+
+                <div class="system-info" id="systemInfo">
+                    <h3>SYSTEM INFORMATION</h3>
+                    <p>OS: LAPD Neural Interface OS v2.049</p>
+                    <p>Kernel: Blade Runner Security Module</p>
+                    <p>Memory: 2049 TB Neural Storage</p>
+                    <p>Network: Quantum Mesh Protocol</p>
+                    <p>Security: Voight-Kampff Authentication</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Overlay -->
+    <div class="settings-overlay" id="settingsOverlay"></div>
+
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-header">
+            <div class="settings-title">SYSTEM CONFIG</div>
+            <button class="close-settings" id="closeSettings">×</button>
+        </div>
+        
+        <div class="theme-section">
+            <div class="section-title">Color Themes</div>
+            <div class="theme-grid">
+                <div class="theme-option active" data-theme="orange">
+                    <div class="theme-preview orange"></div>
+                    <div class="theme-info">
+                        <div class="theme-name">Orange</div>
+                        <div class="theme-description">Classic Blade Runner</div>
+                    </div>
+                </div>
+                <div class="theme-option" data-theme="purple">
+                    <div class="theme-preview purple"></div>
+                    <div class="theme-info">
+                        <div class="theme-name">Purple</div>
+                        <div class="theme-description">Cyberpunk Violet</div>
+                    </div>
+                </div>
+                <div class="theme-option" data-theme="cyan">
+                    <div class="theme-preview cyan"></div>
+                    <div class="theme-info">
+                        <div class="theme-name">Cyan</div>
+                        <div class="theme-description">Neo-Tokyo Blue</div>
+                    </div>
+                </div>
+                <div class="theme-option" data-theme="green">
+                    <div class="theme-preview green"></div>
+                    <div class="theme-info">
+                        <div class="theme-name">Green</div>
+                        <div class="theme-description">Matrix Protocol</div>
+                    </div>
+                </div>
+                <div class="theme-option" data-theme="red">
+                    <div class="theme-preview red"></div>
+                    <div class="theme-info">
+                        <div class="theme-name">Red</div>
+                        <div class="theme-description">Alert Status</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Download Notification -->
+    <div class="download-notification" id="downloadNotification">
+        ID Card Downloaded Successfully!
+    </div>
+
+    <!-- Edit Mode Indicator -->
+    <div class="edit-mode-indicator" id="editModeIndicator">
+        EDIT MODE: ACTIVE
+    </div>
+
+    <!-- Main Application -->
+    <div class="main-app" id="mainApp">
+        <div class="background-grid"></div>
+        <div class="particles" id="particles"></div>
+        
+        <div class="container">
+            <div class="header">
+                <h1 class="title">LAPD IDENTITY SYSTEM</h1>
+                <p class="subtitle">Los Angeles Police Department • 2049</p>
+            </div>
+
+            <div class="button-container">
+                <button class="generate-btn" onclick="generateIdentity()">
+                    GENERATE NEW IDENTITY
+                </button>
+                <button class="edit-btn" id="editBtn" onclick="toggleEditMode()">
+                    EDIT MODE
+                </button>
+                <button class="download-btn" onclick="downloadIdCard()">
+                    DOWNLOAD ID CARD
+                </button>
+                <button class="settings-btn" onclick="openSettings()">
+                    ⚙ SETTINGS
+                </button>
+            </div>
+
+            <div class="id-card" id="idCard">
+                <div class="card-header">
+                    <div class="lapd-logo">LAPD</div>
+                    <div class="id-number" id="idNumber">ID: BR-2049-7834</div>
+                </div>
+                
+                <div class="card-content">
+                    <div class="info-section">
+                        <div class="info-row">
+                            <div class="label">Name:</div>
+                            <div class="value name" id="name" data-field="name">K</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="label">Designation:</div>
+                            <div class="value" id="designation" data-field="designation">Blade Runner</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="label">Sector:</div>
+                            <div class="value" id="sector" data-field="sector">Downtown LA-7</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="label">Clearance:</div>
+                            <div class="value" id="clearance" data-field="clearance">Level 9</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="label">Serial:</div>
+                            <div class="value" id="serial" data-field="serial">KD6-3.7</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="label">Status:</div>
+                            <div class="value" id="status" data-field="status">Active</div>
+                        </div>
+                    </div>
+                    
+                    <div class="photo-section">
+                        <div class="photo-placeholder">👤</div>
+                        <div class="hologram-effect"></div>
+                    </div>
+                </div>
+                
+                <div class="status-bar">
+                    <div class="status">AUTHENTICATED</div>
+                    <div class="timestamp" id="timestamp">2049.11.06 14:23:07</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let isEditMode = false;
+        let currentlyEditing = null;
+        let currentTheme = 'orange';
+
+        // Boot sequence messages
+        const bootMessages = [
+            { text: 'LAPD Neural Interface v2.049 - Starting...', type: 'info', delay: 0 },
+            { text: 'Loading kernel modules...', type: 'normal', delay: 300 },
+            { text: '[OK] Voight-Kampff Authentication Module', type: 'ok', delay: 600 },
+            { text: '[OK] Blade Runner Security Protocol', type: 'ok', delay: 900 },
+            { text: '[OK] Neural Network Interface', type: 'ok', delay: 1200 },
+            { text: '[WARNING] Replicant Detection System - Calibrating...', type: 'warning', delay: 1500 },
+            { text: '[OK] Quantum Mesh Network Connection', type: 'ok', delay: 1800 },
+            { text: '[OK] Memory Banks - 2049 TB Available', type: 'ok', delay: 2100 },
+            { text: 'Initializing Identity Generation Matrix...', type: 'info', delay: 2400 },
+            { text: '[OK] Holographic Display System', type: 'ok', delay: 2700 },
+            { text: '[OK] Biometric Scanner Array', type: 'ok', delay: 3000 },
+            { text: 'System ready. Launching interface...', type: 'info', delay: 3300 }
+        ];
+
+        let currentProgress = 0;
+        let messageIndex = 0;
+
+        function typeBootMessage(message, index) {
+            setTimeout(() => {
+                const bootSequence = document.getElementById('bootSequence');
+                const line = document.createElement('div');
+                line.className = `boot-line ${message.type}`;
+                line.style.animationDelay = '0s';
+                
+                if (message.type === 'normal') {
+                    line.innerHTML = `<span style="color: #666;">[${new Date().toLocaleTimeString()}]</span> ${message.text}`;
+                } else {
+                    line.textContent = message.text;
+                }
+                
+                bootSequence.appendChild(line);
+                
+                // Show progress bar after first few messages
+                if (index === 3) {
+                    document.getElementById('progressContainer').classList.add('show');
+                    startProgressBar();
+                }
+                
+                // Show system info near the end
+                if (index === bootMessages.length - 2) {
+                    setTimeout(() => {
+                        document.getElementById('systemInfo').classList.add('show');
+                    }, 500);
+                }
+                
+                // Start main app after last message
+                if (index === bootMessages.length - 1) {
+                    setTimeout(() => {
+                        hideLoadingScreen();
+                    }, 1500);
+                }
+            }, message.delay);
+        }
+
+        function startProgressBar() {
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            const interval = setInterval(() => {
+                currentProgress += Math.random() * 15 + 5;
+                if (currentProgress > 100) currentProgress = 100;
+                
+                progressBar.style.width = currentProgress + '%';
+                progressText.textContent = Math.floor(currentProgress) + '%';
+                
+                if (currentProgress >= 100) {
+                    clearInterval(interval);
+                    progressText.textContent = 'COMPLETE';
+                }
+            }, 200);
+        }
+
+        function hideLoadingScreen() {
+            const loadingScreen = document.getElementById('loadingScreen');
+            const mainApp = document.getElementById('mainApp');
+            
+            loadingScreen.classList.add('hidden');
+            
+            setTimeout(() => {
+                mainApp.classList.add('visible');
+                createParticles();
+            }, 500);
+        }
+
+        // Initialize boot sequence
+        function startBootSequence() {
+            bootMessages.forEach((message, index) => {
+                typeBootMessage(message, index);
+            });
+        }
+
+        // Theme Management
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('lapd-theme') || 'orange';
+            setTheme(savedTheme);
+        }
+
+        function setTheme(theme) {
+            currentTheme = theme;
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('lapd-theme', theme);
+            
+            // Update active theme in settings
+            document.querySelectorAll('.theme-option').forEach(option => {
+                option.classList.remove('active');
+                if (option.dataset.theme === theme) {
+                    option.classList.add('active');
+                }
+            });
+        }
+
+        // Settings Panel
+        function openSettings() {
+            document.getElementById('settingsPanel').classList.add('open');
+            document.getElementById('settingsOverlay').classList.add('show');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsPanel').classList.remove('open');
+            document.getElementById('settingsOverlay').classList.remove('show');
+        }
+
+        // Generate floating particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            for (let i = 0; i < 30; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (3 + Math.random() * 3) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // Identity data
+        const names = [
+            'K', 'Agent J', 'Officer Chen', 'Detective Reyes', 'Sgt. Martinez',
+            'Lt. Anderson', 'Agent Smith', 'Officer Park', 'Detective Kim',
+            'Sgt. Johnson', 'Agent Davis', 'Officer Wilson', 'Detective Brown'
+        ];
+
+        const designations = [
+            'Blade Runner', 'Replicant Hunter', 'Sector Patrol', 'Crime Scene Analyst',
+            'Surveillance Specialist', 'Data Recovery Agent', 'Memory Technician',
+            'Neural Interface Operator', 'Synthetic Detection Unit', 'Urban Reconnaissance'
+        ];
+
+        const sectors = [
+            'Downtown LA-7', 'Sector 6-B', 'Industrial Zone 12', 'Residential Block 9',
+            'Commercial District 4', 'Harbor Zone 3', 'Outskirts Sector 15',
+            'Central Hub Alpha', 'Perimeter Zone 8', 'Underground Level 5'
+        ];
+
+        const clearanceLevels = [
+            'Level 9', 'Level 7', 'Level 8', 'Level 6', 'Level 10',
+            'Alpha Clearance', 'Beta Access', 'Gamma Protocol', 'Delta Security'
+        ];
+
+        const serials = [
+            'KD6-3.7', 'BR-549', 'LA-2049', 'NX-7', 'RK-800',
+            'JF-Sebastian', 'N6-MAA', 'Roy-Batty', 'Pris-Basic', 'Zhora-9'
+        ];
+
+        const statuses = [
+            'Active', 'On Duty', 'Standby', 'Field Assignment', 'Available',
+            'Patrol Status', 'Investigation Mode', 'Response Ready'
+        ];
+
+        function randomChoice(array) {
+            return array[Math.floor(Math.random() * array.length)];
+        }
+
+        function generateIdNumber() {
+            const prefix = 'BR-2049-';
+            const number = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
+            return prefix + number;
+        }
+
+        function getCurrentTimestamp() {
+            const now = new Date();
+            const year = 2049;
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            
+            return `${year}.${month}.${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        function generateIdentity() {
+            const card = document.getElementById('idCard');
+            card.style.opacity = '0.5';
+            card.style.transform = 'scale(0.95)';
+            
+            setTimeout(() => {
+                document.getElementById('idNumber').textContent = 'ID: ' + generateIdNumber();
+                document.getElementById('name').textContent = randomChoice(names);
+                document.getElementById('designation').textContent = randomChoice(designations);
+                document.getElementById('sector').textContent = randomChoice(sectors);
+                document.getElementById('clearance').textContent = randomChoice(clearanceLevels);
+                document.getElementById('serial').textContent = randomChoice(serials);
+                document.getElementById('status').textContent = randomChoice(statuses);
+                document.getElementById('timestamp').textContent = getCurrentTimestamp();
+                
+                card.style.opacity = '1';
+                card.style.transform = 'scale(1)';
+            }, 300);
+        }
+
+        // Edit Mode Functions
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const editBtn = document.getElementById('editBtn');
+            const editIndicator = document.getElementById('editModeIndicator');
+            const editableElements = document.querySelectorAll('.value[data-field]');
+            
+            if (isEditMode) {
+                editBtn.textContent = 'EXIT EDIT';
+                editBtn.classList.add('active');
+                editIndicator.classList.add('show');
+                editIndicator.classList.remove('exit');
+                editIndicator.textContent = 'EDIT MODE: ACTIVE';
+                
+                editableElements.forEach(element => {
+                    element.classList.add('editable');
+                    element.addEventListener('click', startEditing);
+                });
+            } else {
+                editBtn.textContent = 'EDIT MODE';
+                editBtn.classList.remove('active');
+                editIndicator.classList.add('exit');
+                editIndicator.textContent = 'EDIT MODE: EXITING';
+                
+                setTimeout(() => {
+                    editIndicator.classList.remove('show');
+                    editIndicator.classList.remove('exit');
+                }, 1000);
+                
+                editableElements.forEach(element => {
+                    element.classList.remove('editable');
+                    element.removeEventListener('click', startEditing);
+                });
+                
+                if (currentlyEditing) {
+                    cancelEditing();
+                }
+            }
+        }
+
+        function startEditing(event) {
+            if (!isEditMode || currentlyEditing) return;
+            
+            const element = event.target;
+            currentlyEditing = element;
+            
+            const currentText = element.textContent;
+            element.classList.add('editing');
+            
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentText;
+            input.className = 'edit-input';
+            
+            element.innerHTML = '';
+            element.appendChild(input);
+            
+            input.focus();
+            input.select();
+            
+            input.addEventListener('blur', () => saveEdit(element, input));
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    saveEdit(element, input);
+                } else if (e.key === 'Escape') {
+                    cancelEditing();
+                }
+            });
+        }
+
+        function saveEdit(element, input) {
+            if (!currentlyEditing) return;
+            
+            const newValue = input.value.trim();
+            if (newValue) {
+                element.textContent = newValue;
+            } else {
+                element.textContent = input.defaultValue || 'Unknown';
+            }
+            
+            element.classList.remove('editing');
+            currentlyEditing = null;
+            
+            element.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.8)';
+            setTimeout(() => {
+                element.style.boxShadow = '';
+            }, 1000);
+        }
+
+        function cancelEditing() {
+            if (!currentlyEditing) return;
+            
+            const input = currentlyEditing.querySelector('.edit-input');
+            if (input) {
+                currentlyEditing.textContent = input.defaultValue || 'Unknown';
+            }
+            
+            currentlyEditing.classList.remove('editing');
+            currentlyEditing = null;
+        }
+
+        function downloadIdCard() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = 800;
+            canvas.height = 500;
+            
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, '#141414');
+            gradient.addColorStop(0.5, '#281810');
+            gradient.addColorStop(1, '#1a0a2a');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+            ctx.lineWidth = 4;
+            ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 24px Arial';
+            
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+            ctx.font = 'bold 32px Arial';
+            ctx.fillText('LAPD', 50, 80);
+            
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent-color');
+            ctx.font = 'bold 18px Arial';
+            const idNumber = document.getElementById('idNumber').textContent;
+            ctx.fillText(idNumber, canvas.width - 250, 80);
+            
+            const name = document.getElementById('name').textContent;
+            const designation = document.getElementById('designation').textContent;
+            const sector = document.getElementById('sector').textContent;
+            const clearance = document.getElementById('clearance').textContent;
+            const serial = document.getElementById('serial').textContent;
+            const status = document.getElementById('status').textContent;
+            const timestamp = document.getElementById('timestamp').textContent;
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 28px Arial';
+            ctx.fillText(`NAME: ${name}`, 50, 150);
+            
+            ctx.font = 'bold 20px Arial';
+            ctx.fillText(`DESIGNATION: ${designation}`, 50, 190);
+            ctx.fillText(`SECTOR: ${sector}`, 50, 220);
+            ctx.fillText(`CLEARANCE: ${clearance}`, 50, 250);
+            ctx.fillText(`SERIAL: ${serial}`, 50, 280);
+            ctx.fillText(`STATUS: ${status}`, 50, 310);
+            
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+            ctx.lineWidth = 2;
+            ctx.strokeRect(550, 120, 180, 180);
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+            ctx.font = 'bold 60px Arial';
+            ctx.fillText('👤', 600, 220);
+            
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(50, 350);
+            ctx.lineTo(canvas.width - 50, 350);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#00ff00';
+            ctx.font = 'bold 18px Arial';
+            ctx.fillText('AUTHENTICATED', 50, 380);
+            
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent-color');
+            ctx.fillText(timestamp, canvas.width - 200, 380);
+            
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+            ctx.font = 'bold 16px Arial';
+            ctx.fillText('Los Angeles Police Department • 2049', 50, 450);
+            
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `LAPD_ID_${idNumber.replace('ID: ', '').replace(/-/g, '_')}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showDownloadNotification();
+            }, 'image/png');
+        }
+
+        function showDownloadNotification() {
+            const notification = document.getElementById('downloadNotification');
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Event Listeners
+        document.getElementById('closeSettings').addEventListener('click', closeSettings);
+        document.getElementById('settingsOverlay').addEventListener('click', closeSettings);
+
+        document.querySelectorAll('.theme-option').forEach(option => {
+            option.addEventListener('click', () => {
+                setTheme(option.dataset.theme);
+            });
+        });
+
+        document.addEventListener('click', (event) => {
+            if (currentlyEditing && !currentlyEditing.contains(event.target)) {
+                cancelEditing();
+            }
+        });
+
+        // Initialize
+        loadTheme();
+        setTimeout(startBootSequence, 500);
+        
+        setInterval(() => {
+            const timestampElement = document.getElementById('timestamp');
+            if (timestampElement) {
+                timestampElement.textContent = getCurrentTimestamp();
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
